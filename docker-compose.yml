@@ -1,5 +1,10 @@
-# Run the starter app locally with a single command:
-#   docker compose up --build
+# Run the full stack locally:
+#     cp .env.example .env          # provide the secret(s)
+#     docker compose up --build
+#
+# Two services are defined:
+#   web   -> stateless app   (later: Deployment + Service)
+#   redis -> stateful store  (later: StatefulSet + PersistentVolumeClaim)
 services:
   web:
     build: .
@@ -8,16 +13,38 @@ services:
     ports:
       # host:container — only one application port is exposed.
       - "8080:8080"
-    environment:
-      APP_NAME: starter-app
-      APP_VERSION: "1.0.0"
-      GREETING: "Hello, world!"
-    # Restart on failure to make local troubleshooting easier.
+    env_file:
+      - app.config.env   # non-sensitive config -> ConfigMap
+      - .env             # secrets (gitignored)  -> Secret
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
-    # Container-level health check hitting the /health route.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: starter-app-redis
+    # Read the password from the container env at runtime ($$ -> literal $)
+    # so the secret is not baked into the resolved Compose command.
+    command: ["sh", "-c", "redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    env_file:
+      - .env             # secrets (gitignored)  -> Secret
+    volumes:
+      # Persistent state — the reason Redis becomes a StatefulSet + PVC.
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+
+volumes:
+  redis-data:
