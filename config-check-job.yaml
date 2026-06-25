@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: config-check
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: config-check
+          image: starter-app:1.0.0
+          command:
+            - sh
+            - -c
+            - >
+              echo "APP_NAME=$APP_NAME";
+              test -n "$REDIS_PASSWORD" && echo "secret OK"
+
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: redis-secret
