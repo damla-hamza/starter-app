@@ -1,0 +1,21 @@
+replicaCount: 1
+
+image:
+  repository: starter-app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8080
+
+app:
+  redisHost: redis
+  redisPassword: change-me-in-real-deployments
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

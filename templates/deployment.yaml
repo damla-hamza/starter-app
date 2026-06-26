@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "starter-app.fullname" . }}
+  labels:
+    {{- include "starter-app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: {{ include "starter-app.name" . }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ include "starter-app.name" . }}
+
+    spec:
+      containers:
+      - name: starter-app
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+        ports:
+        - containerPort: {{ .Values.service.port }}
+
+        env:
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "starter-app.fullname" . }}
+              key: REDIS_HOST
+
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "starter-app.fullname" . }}
+              key: REDIS_PASSWORD
+
+        resources:
+{{ toYaml .Values.resources | nindent 10 }}
